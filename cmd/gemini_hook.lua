@@ -1,6 +1,7 @@
 -- 1. Parse Arguments
-local host_server
-local hook_name
+local host_server = ""
+local hook_name = ""
+
 for i, v in ipairs(arg) do
 	if v == "--host-server" then
 		host_server = arg[i + 1]
@@ -33,10 +34,9 @@ if channel == 0 then
 end
 
 -- 4. Trigger Hook on Host
--- We call the internal function to notify the plugin
-local lua_code = string.format("require('gemini.hooks')._trigger('%s', '%s')", hook_name, input)
-
-local ok, res = pcall(vim.rpcrequest, channel, "nvim_exec_lua", lua_code, {})
+-- Use arguments to avoid string injection issues
+local lua_code = "return require('gemini.hooks')._trigger(...)"
+local ok, res = pcall(vim.rpcrequest, channel, "nvim_exec_lua", lua_code, { hook_name, input })
 
 vim.fn.chanclose(channel)
 
@@ -47,9 +47,4 @@ if not ok then
 end
 
 -- 5. Output Success JSON
--- The output here is displayed to the user by the Gemini CLI as a system message.
--- We can keep it minimal or informative.
-local response = {
-	systemMessage = "gemini.nvim: Hook synchronized",
-}
-io.write(vim.json.encode(response))
+io.write(vim.json.encode(res))
