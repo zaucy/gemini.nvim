@@ -65,3 +65,6 @@ The implementation relies on several key mechanisms:
     - Configures Neovim as an MCP server for Gemini, enabling it to call tools like `openDiff` and `closeDiff`.
     - Sets up "Hooks" that notify Neovim about session events (e.g., `BeforeTool`, `AfterModel`).
 4.  **Hook System:** When Gemini executes hooks, it calls a hook script provided by this plugin, which in turn communicates with Neovim via RPC to trigger `User` autocommands, allowing for extensible behavior.
+
+## Other plugins
+* https://github.com/vaijab/gemini-cli.nvim - original inspiration for this plugin
