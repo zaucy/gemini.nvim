@@ -20,17 +20,73 @@ local function update_state()
 	local client_script = get_plugin_root() .. "/cmd/gemini_client.lua"
 	client_script = client_script:gsub("\\", "/")
 
-	for dir, s in pairs(servers) do
-		local settings_path = get_unique_settings_path(dir)
-		local settings_content = {
-			mcpServers = {
-				["gemini.nvim"] = {
-					command = vim.v.progpath,
-					args = { "--clean", "-l", client_script, "--", tostring(s.port) },
-					-- excludeTools = { "openDiff", "closeDiff" },
+	local hook_script = get_plugin_root() .. "/cmd/gemini_hook.lua"
+	hook_script = hook_script:gsub("\\", "/")
+
+	local forwarded_hook_names = {
+		"SessionStart",
+		"BeforeAgent",
+		"BeforeToolSelection",
+		"BeforeTool",
+		"AfterTool",
+		"AfterModel",
+		"SessionEnd",
+	}
+
+	--- @type table<string, any>
+	local hooks_config = {
+		enabled = true,
+	}
+	local notify_command = string.format(
+		"%s%s --clean -l %s -- --host-server %s --log-path %s",
+		vim.fn.has("win32") == 1 and "& " or "", -- for powershell escape stuff
+		vim.fn.shellescape(vim.v.progpath),
+		vim.fn.shellescape(hook_script),
+		vim.fn.shellescape(vim.v.servername),
+		vim.fn.shellescape(get_state_dir() .. "/hooks.log")
+	)
+
+	for _, hook_name in ipairs(forwarded_hook_names) do
+		hooks_config[hook_name] = {
+			{
+				matcher = "*",
+				hooks = {
+					{
+						name = "nvim-" .. hook_name,
+						type = "command",
+						command = notify_command .. " --hook " .. hook_name,
+						description = "notifies gemini.nvim plugin about " .. hook_name .. " hook",
+					},
 				},
 			},
 		}
+	end
+
+	-- Create a list of directories to update: servers + current cwd
+	local dirs_to_update = {}
+	for dir, s in pairs(servers) do
+		dirs_to_update[dir] = s
+	end
+
+	local cwd = vim.fn.getcwd()
+	if not dirs_to_update[cwd] then
+		dirs_to_update[cwd] = false -- Mark as present but no server
+	end
+
+	for dir, s in pairs(dirs_to_update) do
+		local settings_path = get_unique_settings_path(dir)
+		local settings_content = {
+			hooks = hooks_config,
+			mcpServers = {},
+		}
+
+		if s then
+			settings_content.mcpServers["gemini.nvim"] = {
+				command = vim.v.progpath,
+				args = { "--clean", "-l", client_script, "--", tostring(s.port) },
+				-- excludeTools = { "openDiff", "closeDiff" },
+			}
+		end
 
 		vim.fn.mkdir(vim.fn.fnamemodify(settings_path, ":h"), "p")
 
@@ -124,6 +180,19 @@ function M.setup(opts)
 		end,
 	})
 
+	vim.api.nvim_create_autocmd("User", {
+		pattern = "GeminiHookAfterTool",
+		group = group,
+		callback = function(args)
+			local context = args.data.context
+
+			if context.tool_name == "replace" or context.tool_name == "write_file" then
+				local file_path = context.tool_input.file_path
+				vim.cmd("silent! checktime " .. vim.fn.fnameescape(file_path))
+			end
+		end,
+	})
+
 	local timer = vim.uv.new_timer()
 	assert(timer)
 	local send_context = vim.schedule_wrap(function()
@@ -146,6 +215,8 @@ function M.setup(opts)
 		group = group,
 		callback = debounced_send_context,
 	})
+
+	update_state()
 end
 
 return M
