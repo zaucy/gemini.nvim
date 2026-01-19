@@ -20,6 +20,42 @@ local function update_state()
 	local client_script = get_plugin_root() .. "/cmd/gemini_client.lua"
 	client_script = client_script:gsub("\\", "/")
 
+	local hook_script = get_plugin_root() .. "/cmd/gemini_hook.lua"
+	hook_script = hook_script:gsub("\\", "/")
+
+	local forwarded_hook_names = {
+		"SessionStart",
+		"BeforeAgent",
+		"BeforeToolSelection",
+		"BeforeTool",
+		"AfterTool",
+		"AfterModel",
+		"SessionEnd",
+	}
+	local hooks_config = {}
+	local notify_command = string.format(
+		"%s --clean -l %s -- --host-server %s",
+		vim.fn.shellescape(vim.v.progpath),
+		vim.fn.shellescape(hook_script),
+		vim.fn.shellescape(vim.v.servername)
+	)
+
+	for _, hook_name in ipairs(forwarded_hook_names) do
+		hooks_config[hook_name] = {
+			{
+				matcher = "*",
+				hooks = {
+					{
+						name = "nvim-" .. hook_name,
+						type = "command",
+						command = notify_command .. " --hook " .. hook_name,
+						description = "notifies gemini.nvim plugin about " .. hook_name .. " hook",
+					},
+				},
+			},
+		}
+	end
+
 	for dir, s in pairs(servers) do
 		local settings_path = get_unique_settings_path(dir)
 		local settings_content = {
@@ -30,6 +66,7 @@ local function update_state()
 					-- excludeTools = { "openDiff", "closeDiff" },
 				},
 			},
+			hooks = hooks_config,
 		}
 
 		vim.fn.mkdir(vim.fn.fnamemodify(settings_path, ":h"), "p")
