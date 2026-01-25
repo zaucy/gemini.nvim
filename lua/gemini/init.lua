@@ -34,9 +34,7 @@ local function update_state()
 	}
 
 	--- @type table<string, any>
-	local hooks_config = {
-		enabled = true,
-	}
+	local hooks_config = {}
 	local notify_command = string.format(
 		"%s%s --clean -l %s -- --host-server %s --log-path %s",
 		vim.fn.has("win32") == 1 and "& " or "", -- for powershell escape stuff
@@ -78,6 +76,9 @@ local function update_state()
 		local settings_content = {
 			hooks = hooks_config,
 			mcpServers = {},
+			tools = {
+				enableHooks = true,
+			},
 		}
 
 		if s then
