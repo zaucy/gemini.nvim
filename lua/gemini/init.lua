@@ -85,7 +85,7 @@ local function update_state()
 			settings_content.mcpServers["gemini.nvim"] = {
 				command = vim.v.progpath,
 				args = { "--clean", "-l", client_script, "--", tostring(s.port) },
-				-- excludeTools = { "openDiff", "closeDiff" },
+				excludeTools = { "openDiff", "closeDiff" },
 			}
 		end
 
