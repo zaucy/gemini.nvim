@@ -49,7 +49,7 @@ function M.get_context(preferred_bufnr, cwd)
 	}
 
 	local current_buf = vim.api.nvim_get_current_buf()
-	local buffers = vim.api.nvim_list_bufs()
+	local wins = vim.api.nvim_tabpage_list_wins(vim.api.nvim_get_current_tabpage())
 
 	-- Determine effective active buffer
 	local current_buftype = vim.api.nvim_get_option_value("buftype", { buf = current_buf })
@@ -58,7 +58,8 @@ function M.get_context(preferred_bufnr, cwd)
 		effective_active_buf = preferred_bufnr
 	end
 
-	for _, bufnr in ipairs(buffers) do
+	for _, win in ipairs(wins) do
+		local bufnr = vim.api.nvim_win_get_buf(win)
 		if vim.api.nvim_buf_is_loaded(bufnr) then
 			local name = vim.api.nvim_buf_get_name(bufnr)
 			local buftype = vim.api.nvim_get_option_value("buftype", { buf = bufnr })
