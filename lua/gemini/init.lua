@@ -26,11 +26,14 @@ local function update_state()
 	local forwarded_hook_names = {
 		"SessionStart",
 		"BeforeAgent",
+		"BeforeModel",
 		"BeforeToolSelection",
 		"BeforeTool",
 		"AfterTool",
 		"AfterModel",
+		"AfterAgent",
 		"SessionEnd",
+		"Notification",
 	}
 
 	--- @type table<string, any>
@@ -138,30 +141,30 @@ function M.setup(opts)
 	local state_dir = get_state_dir()
 	vim.fn.mkdir(state_dir, "p")
 
-	mcp.register_tool(require("gemini.diff").open_diff, {
-		name = "openDiff",
-		description = "Opens a diff view in Neovim to show proposed changes.",
-		inputSchema = {
-			type = "object",
-			properties = {
-				filePath = { type = "string" },
-				newContent = { type = "string" },
-			},
-			required = { "filePath", "newContent" },
-		},
-	})
+	-- mcp.register_tool(require("gemini.diff").open_diff, {
+	-- 	name = "openDiff",
+	-- 	description = "Opens a diff view in Neovim to show proposed changes.",
+	-- 	inputSchema = {
+	-- 		type = "object",
+	-- 		properties = {
+	-- 			filePath = { type = "string" },
+	-- 			newContent = { type = "string" },
+	-- 		},
+	-- 		required = { "filePath", "newContent" },
+	-- 	},
+	-- })
 
-	mcp.register_tool(require("gemini.diff").close_diff, {
-		name = "closeDiff",
-		description = "Closes the diff view for a specific file.",
-		inputSchema = {
-			type = "object",
-			properties = {
-				filePath = { type = "string" },
-			},
-			required = { "filePath" },
-		},
-	})
+	-- mcp.register_tool(require("gemini.diff").close_diff, {
+	-- 	name = "closeDiff",
+	-- 	description = "Closes the diff view for a specific file.",
+	-- 	inputSchema = {
+	-- 		type = "object",
+	-- 		properties = {
+	-- 			filePath = { type = "string" },
+	-- 		},
+	-- 		required = { "filePath" },
+	-- 	},
+	-- })
 
 	vim.api.nvim_create_autocmd("User", {
 		pattern = "McpServerCreated",
@@ -193,6 +196,8 @@ function M.setup(opts)
 			end
 		end,
 	})
+
+	require("gemini.follow").setup(opts)
 
 	local timer = vim.uv.new_timer()
 	assert(timer)

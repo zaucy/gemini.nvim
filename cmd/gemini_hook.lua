@@ -1,22 +1,26 @@
 -- 1. Parse Arguments
 local host_server = ""
 local hook_name = ""
+local log_path = ""
 
-for i, v in ipairs(arg) do
+for i = 1, #arg do
+	local v = arg[i]
 	if v == "--host-server" then
 		host_server = arg[i + 1]
 	elseif v == "--hook" then
 		hook_name = arg[i + 1]
+	elseif v == "--log-path" then
+		log_path = arg[i + 1]
 	end
 end
 
-if not host_server then
+if not host_server or host_server == "" then
 	local msg = "gemini.nvim hook: Error - --host-server argument required"
 	io.write(vim.json.encode({ systemMessage = msg }))
 	return
 end
 
-if not hook_name then
+if not hook_name or hook_name == "" then
 	local msg = "gemini.nvim hook: Error - --hook argument required"
 	io.write(vim.json.encode({ systemMessage = msg }))
 	return
@@ -24,6 +28,15 @@ end
 
 -- 2. Read Stdin (Hook Context)
 local input = io.read("*a")
+
+-- 2.1 Log Hook (if log path provided)
+if log_path ~= "" then
+	local f_log = io.open(log_path, "a")
+	if f_log then
+		f_log:write(string.format("[%s] Hook: %s, Data: %s\n", os.date(), hook_name, input))
+		f_log:close()
+	end
+end
 
 -- 3. Connect to Host Server
 local channel = vim.fn.sockconnect("pipe", host_server, { rpc = true })
